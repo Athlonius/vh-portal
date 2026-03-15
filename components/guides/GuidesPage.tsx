@@ -5,6 +5,7 @@ import { Search, Plus, Pencil, Trash2, CalendarDays, AlertTriangle } from "lucid
 import { mockGuides, ALL_LANGUAGES, ALL_REGIONS, ALL_SPECIALTIES, type Guide } from "./mockGuides";
 import TagList from "../shared/TagList";
 import AddGuideModal from "./AddGuideModal";
+import { useAuth } from "@/components/AuthContext";
 
 function ConfirmDialog({ message, onConfirm, onCancel }: { message: string; onConfirm: () => void; onCancel: () => void }) {
   return (
@@ -36,6 +37,7 @@ export default function GuidesPage() {
   const [showModal, setShowModal] = useState(false);
   const [editGuide, setEditGuide] = useState<Guide | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const { isManager } = useAuth();
 
   const filtered = useMemo(() => guides.filter((g) => {
     const q = search.toLowerCase();
@@ -109,6 +111,7 @@ export default function GuidesPage() {
                     key={g.id} g={g} i={i + 1}
                     onEdit={setEditGuide}
                     onDelete={(id) => setDeleteConfirmId(id)}
+                    canDelete={isManager}
                   />
                 ))
               }
@@ -148,7 +151,7 @@ export default function GuidesPage() {
   );
 }
 
-function GuideRow({ g, i, onEdit, onDelete }: { g: Guide; i: number; onEdit: (g: Guide) => void; onDelete: (id: number) => void }) {
+function GuideRow({ g, i, onEdit, onDelete, canDelete }: { g: Guide; i: number; onEdit: (g: Guide) => void; onDelete: (id: number) => void; canDelete?: boolean }) {
   const [hov, setHov] = useState(false);
   const statusMap: Record<string, { bg: string; color: string }> = {
     Active:     { bg: "#0D2E1A", color: "#4ADE80" },
@@ -177,7 +180,7 @@ function GuideRow({ g, i, onEdit, onDelete }: { g: Guide; i: number; onEdit: (g:
         <div style={{ display: "flex", gap: 4 }}>
           <IBtn title="Calendar" color="#60A5FA"><CalendarDays size={14} /></IBtn>
           <IBtn title="Edit" color="#A78BFA" onClick={() => onEdit(g)}><Pencil size={14} /></IBtn>
-          <IBtn title="Delete" color="#F87171" onClick={() => onDelete(g.id)}><Trash2 size={14} /></IBtn>
+          {canDelete && <IBtn title="Delete" color="#F87171" onClick={() => onDelete(g.id)}><Trash2 size={14} /></IBtn>}
         </div>
       </td>
     </tr>

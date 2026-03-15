@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { Search, Plus, Pencil, Trash2, AlertTriangle } from "lucide-react";
 import { mockUsers, roleStyle, type User, type UserRole } from "./mockUsers";
 import AddUserModal from "./AddUserModal";
+import { useAuth } from "@/components/AuthContext";
 
 function RoleBadge({ role }: { role: UserRole }) {
   const s = roleStyle[role];
@@ -53,6 +54,7 @@ export default function UsersPage() {
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const { isManager } = useAuth();
 
   const filtered = useMemo(() =>
     users.filter((u) => {
@@ -109,7 +111,7 @@ export default function UsersPage() {
               {filtered.length === 0 ? (
                 <tr><td colSpan={9} style={{ padding: "48px 0", textAlign: "center", color: "#475569" }}>No users found.</td></tr>
               ) : (
-                filtered.map((u, i) => <UserRow key={u.id} user={u} index={i + 1} onDelete={(id) => setDeleteConfirmId(id)} />)
+                filtered.map((u, i) => <UserRow key={u.id} user={u} index={i + 1} onDelete={(id) => setDeleteConfirmId(id)} canDelete={isManager} />)
               )}
             </tbody>
           </table>
@@ -133,7 +135,7 @@ export default function UsersPage() {
   );
 }
 
-function UserRow({ user: u, index, onDelete }: { user: User; index: number; onDelete: (id: number) => void }) {
+function UserRow({ user: u, index, onDelete, canDelete }: { user: User; index: number; onDelete: (id: number) => void; canDelete?: boolean }) {
   const [hov, setHov] = useState(false);
   return (
     <tr onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
@@ -149,7 +151,7 @@ function UserRow({ user: u, index, onDelete }: { user: User; index: number; onDe
       <td style={tdStyle}>
         <div style={{ display: "flex", gap: 4 }}>
           <IBtn title="Edit" color="#60A5FA"><Pencil size={14} /></IBtn>
-          <IBtn title="Delete" color="#F87171" onClick={() => onDelete(u.id)} ><Trash2 size={14} /></IBtn>
+          {canDelete && <IBtn title="Delete" color="#F87171" onClick={() => onDelete(u.id)}><Trash2 size={14} /></IBtn>}
         </div>
       </td>
     </tr>

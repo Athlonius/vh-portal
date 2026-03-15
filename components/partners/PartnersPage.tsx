@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { Search, Plus, Pencil, Trash2, Copy, AlertTriangle } from "lucide-react";
 import { mockPartners, type Partner, type Market } from "./mockPartners";
 import AddPartnerModal from "./AddPartnerModal";
+import { useAuth } from "@/components/AuthContext";
 
 function MarketBadge({ market }: { market: Market }) {
   const map: Record<Market, { bg: string; color: string; emoji: string }> = {
@@ -74,6 +75,7 @@ export default function PartnersPage() {
   const [showModal, setShowModal] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [duplicateConfirmId, setDuplicateConfirmId] = useState<number | null>(null);
+  const { isManager } = useAuth();
 
   const filtered = useMemo(() => partners.filter((p) => {
     if (search && !p.companyName.toLowerCase().includes(search.toLowerCase())) return false;
@@ -159,6 +161,7 @@ export default function PartnersPage() {
                     key={p.id} partner={p} index={i + 1}
                     onDelete={(id) => setDeleteConfirmId(id)}
                     onDuplicate={(id) => setDuplicateConfirmId(id)}
+                    canDelete={isManager}
                   />
                 ))
               )}
@@ -199,10 +202,11 @@ export default function PartnersPage() {
   );
 }
 
-function PartnerRow({ partner: p, index, onDelete, onDuplicate }: {
+function PartnerRow({ partner: p, index, onDelete, onDuplicate, canDelete }: {
   partner: Partner; index: number;
   onDelete: (id: number) => void;
   onDuplicate: (id: number) => void;
+  canDelete?: boolean;
 }) {
   const [hov, setHov] = useState(false);
   return (
@@ -228,7 +232,7 @@ function PartnerRow({ partner: p, index, onDelete, onDuplicate }: {
         <div style={{ display: "flex", gap: 4 }}>
           <IBtn title="Edit" color="#60A5FA"><Pencil size={14} /></IBtn>
           <IBtn title="Duplicate" color="#A78BFA" onClick={() => onDuplicate(p.id)}><Copy size={14} /></IBtn>
-          <IBtn title="Delete" color="#F87171" onClick={() => onDelete(p.id)}><Trash2 size={14} /></IBtn>
+          {canDelete && <IBtn title="Delete" color="#F87171" onClick={() => onDelete(p.id)}><Trash2 size={14} /></IBtn>}
         </div>
       </td>
     </tr>

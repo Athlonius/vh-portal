@@ -2,8 +2,9 @@
 
 import { useState, useMemo } from "react";
 import { Search, Plus, Pencil, Trash2 } from "lucide-react";
-import { mockExtras, EXTRA_CITIES, CALCULATE_TYPES, SERVICE_TYPES, type Extra, type ExtraCalculateType, type ExtraServiceType } from "./mockExtras";
+import { mockExtras, CALCULATE_TYPES, SERVICE_TYPES, type Extra, type ExtraCalculateType, type ExtraServiceType } from "./mockExtras";
 import AddExtraModal from "./AddExtraModal";
+import { useAuth } from "@/components/AuthContext";
 
 const calcColors: Record<ExtraCalculateType, { bg: string; color: string }> = {
   "Per Person":         { bg: "#1E3A5F", color: "#60A5FA" },
@@ -51,6 +52,7 @@ export default function ExtrasPage() {
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
   const [calcType, setCalcType] = useState("All");
   const [showModal, setShowModal] = useState(false);
+  const { isManager } = useAuth();
 
   const toggleCity = (c: string) => {
     if (c === "Any") {
@@ -143,7 +145,7 @@ export default function ExtrasPage() {
             <tbody>
               {filtered.length === 0
                 ? <tr><td colSpan={11} style={{ padding: "48px 0", textAlign: "center", color: "#475569" }}>No extras found.</td></tr>
-                : filtered.map((e, i) => <ExtraRow key={e.id} e={e} i={i + 1} onDelete={(id) => setExtras((p) => p.filter((x) => x.id !== id))} />)
+                : filtered.map((e, i) => <ExtraRow key={e.id} e={e} i={i + 1} onDelete={(id) => setExtras((p) => p.filter((x) => x.id !== id))} canDelete={isManager} />)
               }
             </tbody>
             {filtered.length > 0 && (
@@ -167,7 +169,7 @@ export default function ExtrasPage() {
   );
 }
 
-function ExtraRow({ e, i, onDelete }: { e: Extra; i: number; onDelete: (id: number) => void }) {
+function ExtraRow({ e, i, onDelete, canDelete }: { e: Extra; i: number; onDelete: (id: number) => void; canDelete?: boolean }) {
   const [hov, setHov] = useState(false);
   const priceDisplay = e.price === 0
     ? <span style={{ color: "#4ADE80", fontWeight: 700 }}>Free</span>
@@ -194,7 +196,7 @@ function ExtraRow({ e, i, onDelete }: { e: Extra; i: number; onDelete: (id: numb
       <td style={td}>
         <div style={{ display: "flex", gap: 4 }}>
           <IBtn title="Edit" color="#60A5FA"><Pencil size={14} /></IBtn>
-          <IBtn title="Delete" color="#F87171" onClick={() => onDelete(e.id)}><Trash2 size={14} /></IBtn>
+          {canDelete && <IBtn title="Delete" color="#F87171" onClick={() => onDelete(e.id)}><Trash2 size={14} /></IBtn>}
         </div>
       </td>
     </tr>

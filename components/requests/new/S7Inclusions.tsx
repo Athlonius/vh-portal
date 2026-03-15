@@ -35,8 +35,8 @@ export default function S7Inclusions(p: Props) {
   const addMeal = (id: number) => {
     const item = mockMeals.find((m) => m.id === id);
     if (!item) return;
-    const totalGel = p.adults * p.nights * item.pricePerPersonGel;
-    const label = `${p.nights} days × ${p.adults} pax × ₾${item.pricePerPersonGel}`;
+    const totalGel = p.adults * p.nights * item.pricePerPerson;
+    const label = `${p.nights} days × ${p.adults} pax × ₾${item.pricePerPerson}`;
     p.setMealInclusions([...p.mealInclusions, { id: uid(), name: item.mealName, calcLabel: label, totalGel }]);
   };
 

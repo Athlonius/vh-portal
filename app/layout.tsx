@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import PortalLayout from "@/components/PortalLayout";
+import { AuthProvider } from "@/components/AuthContext";
 
 export const metadata: Metadata = {
   title: "VH Portal",
@@ -15,7 +16,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <PortalLayout>{children}</PortalLayout>
+        <AuthProvider>
+          <PortalLayout>{children}</PortalLayout>
+        </AuthProvider>
       </body>
     </html>
   );

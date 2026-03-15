@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { Search, Plus, Pencil, Copy, Trash2, Upload, AlertTriangle } from "lucide-react";
 import { mockTours, mockRates, TOUR_TYPES, VEHICLE_TYPES, type Tour, type TourRate, type TourType } from "./mockTours";
 import AddTourModal from "./AddTourModal";
+import { useAuth } from "@/components/AuthContext";
 
 function MarketBadge({ market }: { market: string }) {
   const map: Record<string, { bg: string; color: string }> = {
@@ -104,6 +105,7 @@ export default function ToursPage() {
   const [tours, setTours] = useState<Tour[]>(mockTours);
   const [rates, setRates] = useState<TourRate[]>(mockRates);
   const [showModal, setShowModal] = useState(false);
+  const { isManager } = useAuth();
 
   // Tour filters
   const [tourSearch, setTourSearch] = useState("");
@@ -181,6 +183,7 @@ export default function ToursPage() {
                     key={t.id} t={t} i={i + 1}
                     onDuplicate={() => setDuplicateTourConfirmId(t.id)}
                     onDelete={() => setDeleteTourConfirmId(t.id)}
+                    canDelete={isManager}
                   />
                 ))
               }
@@ -247,6 +250,7 @@ export default function ToursPage() {
                     key={r.id} r={r} i={i + 1}
                     onDuplicate={() => setDuplicateRateConfirmId(r.id)}
                     onDelete={() => setDeleteRateConfirmId(r.id)}
+                    canDelete={isManager}
                   />
                 ))
               }
@@ -307,7 +311,7 @@ export default function ToursPage() {
   );
 }
 
-function TourRow({ t, i, onDuplicate, onDelete }: { t: Tour; i: number; onDuplicate: () => void; onDelete: () => void }) {
+function TourRow({ t, i, onDuplicate, onDelete, canDelete }: { t: Tour; i: number; onDuplicate: () => void; onDelete: () => void; canDelete?: boolean }) {
   const [hov, setHov] = useState(false);
   return (
     <tr onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
@@ -323,14 +327,14 @@ function TourRow({ t, i, onDuplicate, onDelete }: { t: Tour; i: number; onDuplic
         <div style={{ display: "flex", gap: 4 }}>
           <IBtn title="Edit" color="#60A5FA"><Pencil size={14} /></IBtn>
           <IBtn title="Duplicate" color="#A78BFA" onClick={onDuplicate}><Copy size={14} /></IBtn>
-          <IBtn title="Delete" color="#F87171" onClick={onDelete}><Trash2 size={14} /></IBtn>
+          {canDelete && <IBtn title="Delete" color="#F87171" onClick={onDelete}><Trash2 size={14} /></IBtn>}
         </div>
       </td>
     </tr>
   );
 }
 
-function RateRow({ r, i, onDuplicate, onDelete }: { r: TourRate; i: number; onDuplicate: () => void; onDelete: () => void }) {
+function RateRow({ r, i, onDuplicate, onDelete, canDelete }: { r: TourRate; i: number; onDuplicate: () => void; onDelete: () => void; canDelete?: boolean }) {
   const [hov, setHov] = useState(false);
   return (
     <tr onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
@@ -347,7 +351,7 @@ function RateRow({ r, i, onDuplicate, onDelete }: { r: TourRate; i: number; onDu
         <div style={{ display: "flex", gap: 4 }}>
           <IBtn title="Edit" color="#60A5FA"><Pencil size={14} /></IBtn>
           <IBtn title="Duplicate" color="#A78BFA" onClick={onDuplicate}><Copy size={14} /></IBtn>
-          <IBtn title="Delete" color="#F87171" onClick={onDelete}><Trash2 size={14} /></IBtn>
+          {canDelete && <IBtn title="Delete" color="#F87171" onClick={onDelete}><Trash2 size={14} /></IBtn>}
         </div>
       </td>
     </tr>

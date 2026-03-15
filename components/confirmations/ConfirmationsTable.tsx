@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Pencil, Trash2, Download, Plus, X, Search } from "lucide-react";
 import { mockConfirmations, type Confirmation, type ConfirmationStatus } from "./mockConfirmations";
+import { useAuth } from "@/components/AuthContext";
 
 const MONTHS = [
   "All", "January", "February", "March", "April", "May", "June",
@@ -171,6 +172,7 @@ export default function ConfirmationsTable() {
   const [showFilters, setShowFilters] = useState(false);
 
   const [editItem, setEditItem] = useState<Confirmation | null>(null);
+  const { isManager } = useAuth();
 
   const filtered = useMemo(() => {
     return confirmations.filter((c) => {
@@ -317,7 +319,7 @@ export default function ConfirmationsTable() {
                 </tr>
               ) : (
                 filtered.map((c, i) => (
-                  <ConfirmationRow key={c.id} c={c} index={i + 1} onEdit={setEditItem} onDelete={(id) => setConfirmations((p) => p.filter((x) => x.id !== id))} />
+                  <ConfirmationRow key={c.id} c={c} index={i + 1} onEdit={setEditItem} onDelete={(id) => setConfirmations((p) => p.filter((x) => x.id !== id))} canDelete={isManager} />
                 ))
               )}
             </tbody>
@@ -346,7 +348,7 @@ export default function ConfirmationsTable() {
   );
 }
 
-function ConfirmationRow({ c, index, onEdit, onDelete }: { c: Confirmation; index: number; onEdit: (c: Confirmation) => void; onDelete: (id: number) => void }) {
+function ConfirmationRow({ c, index, onEdit, onDelete, canDelete }: { c: Confirmation; index: number; onEdit: (c: Confirmation) => void; onDelete: (id: number) => void; canDelete?: boolean }) {
   const [hov, setHov] = useState(false);
   const profit = c.revenue - c.expenses;
 
@@ -383,7 +385,7 @@ function ConfirmationRow({ c, index, onEdit, onDelete }: { c: Confirmation; inde
       <td style={tdStyle}>
         <div style={{ display: "flex", gap: 3 }}>
           <ActionBtn title="Edit" color="#60A5FA" onClick={() => onEdit(c)}><Pencil size={13} /></ActionBtn>
-          <ActionBtn title="Delete" color="#F87171" onClick={() => onDelete(c.id)}><Trash2 size={13} /></ActionBtn>
+          {canDelete && <ActionBtn title="Delete" color="#F87171" onClick={() => onDelete(c.id)}><Trash2 size={13} /></ActionBtn>}
         </div>
       </td>
     </tr>

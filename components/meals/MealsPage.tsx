@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { Search, Plus, Pencil, Trash2, Upload, AlertTriangle } from "lucide-react";
 import { mockMeals, MEAL_MARKETS, MEAL_TYPES, type Meal } from "./mockMeals";
 import AddMealModal from "./AddMealModal";
+import { useAuth } from "@/components/AuthContext";
 
 const marketStyle: Record<string, { bg: string; color: string }> = {
   India: { bg: "#1E3A5F", color: "#60A5FA" },
@@ -63,6 +64,7 @@ export default function MealsPage() {
   const [mealType, setMealType] = useState("All");
   const [showModal, setShowModal] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const { isManager } = useAuth();
 
   const filtered = useMemo(() => meals.filter((m) => {
     if (search && !m.mealName.toLowerCase().includes(search.toLowerCase()) && !m.restaurantName.toLowerCase().includes(search.toLowerCase())) return false;
@@ -144,7 +146,7 @@ export default function MealsPage() {
               {filtered.length === 0
                 ? <tr><td colSpan={10} style={{ padding: "48px 0", textAlign: "center", color: "#475569" }}>No meals found.</td></tr>
                 : filtered.map((m, i) => (
-                  <MealRow key={m.id} m={m} i={i + 1} onDelete={(id) => setDeleteConfirmId(id)} />
+                  <MealRow key={m.id} m={m} i={i + 1} onDelete={(id) => setDeleteConfirmId(id)} canDelete={isManager} />
                 ))
               }
             </tbody>
@@ -177,7 +179,7 @@ export default function MealsPage() {
   );
 }
 
-function MealRow({ m, i, onDelete }: { m: Meal; i: number; onDelete: (id: number) => void }) {
+function MealRow({ m, i, onDelete, canDelete }: { m: Meal; i: number; onDelete: (id: number) => void; canDelete?: boolean }) {
   const [hov, setHov] = useState(false);
   const priceDisplay = m.currency === "GEL"
     ? <span style={{ fontWeight: 700, color: "#4ADE80" }}>₾ {m.pricePerPerson}</span>
@@ -202,7 +204,7 @@ function MealRow({ m, i, onDelete }: { m: Meal; i: number; onDelete: (id: number
       <td style={td}>
         <div style={{ display: "flex", gap: 4 }}>
           <IBtn title="Edit" color="#60A5FA"><Pencil size={14} /></IBtn>
-          <IBtn title="Delete" color="#F87171" onClick={() => onDelete(m.id)}><Trash2 size={14} /></IBtn>
+          {canDelete && <IBtn title="Delete" color="#F87171" onClick={() => onDelete(m.id)}><Trash2 size={14} /></IBtn>}
         </div>
       </td>
     </tr>

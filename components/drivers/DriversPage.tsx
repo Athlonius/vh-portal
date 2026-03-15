@@ -5,6 +5,7 @@ import { Search, Plus, Pencil, Trash2, CalendarDays, AlertTriangle } from "lucid
 import { mockDrivers, ALL_LANGUAGES, ALL_VEHICLES, type Driver } from "./mockDrivers";
 import TagList from "../shared/TagList";
 import AddDriverModal from "./AddDriverModal";
+import { useAuth } from "@/components/AuthContext";
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { bg: string; color: string }> = {
@@ -49,6 +50,7 @@ export default function DriversPage() {
   const [showModal, setShowModal] = useState(false);
   const [editDriver, setEditDriver] = useState<Driver | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const { isManager } = useAuth();
 
   const filtered = useMemo(() => drivers.filter((d) => {
     const q = search.toLowerCase();
@@ -117,6 +119,7 @@ export default function DriversPage() {
                     key={d.id} d={d} i={i + 1}
                     onEdit={setEditDriver}
                     onDelete={(id) => setDeleteConfirmId(id)}
+                    canDelete={isManager}
                   />
                 ))
               }
@@ -156,7 +159,7 @@ export default function DriversPage() {
   );
 }
 
-function DriverRow({ d, i, onEdit, onDelete }: { d: Driver; i: number; onEdit: (d: Driver) => void; onDelete: (id: number) => void }) {
+function DriverRow({ d, i, onEdit, onDelete, canDelete }: { d: Driver; i: number; onEdit: (d: Driver) => void; onDelete: (id: number) => void; canDelete?: boolean }) {
   const [hov, setHov] = useState(false);
   return (
     <tr onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
@@ -174,7 +177,7 @@ function DriverRow({ d, i, onEdit, onDelete }: { d: Driver; i: number; onEdit: (
         <div style={{ display: "flex", gap: 4 }}>
           <IBtn title="Calendar" color="#60A5FA"><CalendarDays size={14} /></IBtn>
           <IBtn title="Edit" color="#A78BFA" onClick={() => onEdit(d)}><Pencil size={14} /></IBtn>
-          <IBtn title="Delete" color="#F87171" onClick={() => onDelete(d.id)}><Trash2 size={14} /></IBtn>
+          {canDelete && <IBtn title="Delete" color="#F87171" onClick={() => onDelete(d.id)}><Trash2 size={14} /></IBtn>}
         </div>
       </td>
     </tr>
