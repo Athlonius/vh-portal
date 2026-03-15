@@ -1,4 +1,4 @@
-export type Market = "India" | "GCC";
+export type Market = "India" | "GCC" | "Other";
 export type PartnerStatus = "Active" | "Inactive" | "Prospect";
 
 export interface Agent {

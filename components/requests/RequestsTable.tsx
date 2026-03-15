@@ -49,7 +49,10 @@ export default function RequestsTable() {
   const [reqDateTo, setReqDateTo] = useState("");
   const [travelDateFrom, setTravelDateFrom] = useState("");
   const [travelDateTo, setTravelDateTo] = useState("");
+  const [createdBy, setCreatedBy] = useState("All");
   const [page, setPage] = useState(1);
+
+  const CREATED_BY_OPTIONS = ["All", "Eynur Ahmadov", "Nino Giorgadze", "Lasha Mchedlidze"];
 
   const filtered = useMemo(() => {
     return mockRequests.filter((r) => {
@@ -61,9 +64,10 @@ export default function RequestsTable() {
       if (reqDateTo && r.requestDate > reqDateTo) return false;
       if (travelDateFrom && r.travelDateFrom < travelDateFrom) return false;
       if (travelDateTo && r.travelDateTo > travelDateTo) return false;
+      if (createdBy !== "All" && r.createdBy !== createdBy) return false;
       return true;
     });
-  }, [search, agency, agent, status, reqDateFrom, reqDateTo, travelDateFrom, travelDateTo]);
+  }, [search, agency, agent, status, reqDateFrom, reqDateTo, travelDateFrom, travelDateTo, createdBy]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -72,11 +76,11 @@ export default function RequestsTable() {
   const clearFilters = () => {
     setSearch(""); setAgency(""); setAgent(""); setStatus("All");
     setReqDateFrom(""); setReqDateTo(""); setTravelDateFrom(""); setTravelDateTo("");
-    setPage(1);
+    setCreatedBy("All"); setPage(1);
   };
 
   const hasFilters = search || agency || agent || status !== "All" ||
-    reqDateFrom || reqDateTo || travelDateFrom || travelDateTo;
+    reqDateFrom || reqDateTo || travelDateFrom || travelDateTo || createdBy !== "All";
 
   return (
     <div style={{ padding: "32px 32px 48px" }}>
@@ -206,6 +210,20 @@ export default function RequestsTable() {
               style={{ ...inputStyle, width: 140, colorScheme: "dark" }}
             />
           </div>
+        </label>
+
+        {/* Created By */}
+        <label style={labelStyle}>
+          Created By
+          <select
+            value={createdBy}
+            onChange={(e) => { setCreatedBy(e.target.value); setPage(1); }}
+            style={{ ...inputStyle, width: 160, cursor: "pointer" }}
+          >
+            {CREATED_BY_OPTIONS.map((o) => (
+              <option key={o} value={o}>{o}</option>
+            ))}
+          </select>
         </label>
 
         {/* Clear */}

@@ -5,21 +5,40 @@ import { ALL_LANGUAGES, ALL_REGIONS, ALL_SPECIALTIES, type Guide, type GuideStat
 import CheckboxGroup from "../shared/CheckboxGroup";
 import { Overlay, ModalHeader, Section, Field, ActiveToggle, ModalFooter, inp } from "../drivers/AddDriverModal";
 
-interface Props { onClose: () => void; onSave: (g: Omit<Guide, "id">) => void; }
+interface Props {
+  onClose: () => void;
+  onSave: (g: Omit<Guide, "id">) => void;
+  onUpdate?: (g: Guide) => void;
+  guide?: Guide;
+}
 
-export default function AddGuideModal({ onClose, onSave }: Props) {
+export default function AddGuideModal({ onClose, onSave, onUpdate, guide }: Props) {
+  const isEdit = !!guide;
   const [f, setF] = useState({
-    firstName: "", lastName: "", phone: "", email: "",
-    status: "Active" as GuideStatus,
-    languages: [] as string[], regions: [] as string[], specialties: [] as string[],
-    active: true, notes: "",
+    firstName: guide?.firstName ?? "", lastName: guide?.lastName ?? "",
+    phone: guide?.phone ?? "", email: guide?.email ?? "",
+    status: (guide?.status ?? "Active") as GuideStatus,
+    languages: guide?.languages ?? [] as string[],
+    regions: guide?.regions ?? [] as string[],
+    specialties: guide?.specialties ?? [] as string[],
+    active: guide?.active ?? true, notes: guide?.notes ?? "",
   });
   const set = (k: keyof typeof f, v: unknown) => setF((p) => ({ ...p, [k]: v }));
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isEdit && onUpdate && guide) {
+      onUpdate({ ...f, id: guide.id });
+    } else {
+      onSave(f);
+    }
+    onClose();
+  };
+
   return (
     <Overlay onClose={onClose}>
-      <ModalHeader title="Add New Guide" sub="Fill in guide details and expertise." onClose={onClose} />
-      <form onSubmit={(e) => { e.preventDefault(); onSave(f); onClose(); }} style={{ padding: 24 }}>
+      <ModalHeader title={isEdit ? "Edit Guide" : "Add New Guide"} sub="Fill in guide details and expertise." onClose={onClose} />
+      <form onSubmit={handleSubmit} style={{ padding: 24 }}>
         <Section label="Personal Information">
           <Field label="First Name" required><input required value={f.firstName} onChange={(e) => set("firstName", e.target.value)} style={inp} placeholder="First name" /></Field>
           <Field label="Last Name" required><input required value={f.lastName} onChange={(e) => set("lastName", e.target.value)} style={inp} placeholder="Last name" /></Field>

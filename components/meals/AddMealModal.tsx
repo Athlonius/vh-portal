@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MEAL_MARKETS, MEAL_TYPES, type Meal, type MealMarket, type MealType, type MealStatus } from "./mockMeals";
+import { MEAL_MARKETS, MEAL_TYPES, type Meal, type MealMarket, type MealType, type MealStatus, type MealCurrency } from "./mockMeals";
 import { Overlay, ModalHeader, Section, Field, ModalFooter, inp } from "../drivers/AddDriverModal";
 
 interface Props { onClose: () => void; onSave: (m: Omit<Meal, "id">) => void; }
@@ -14,10 +14,15 @@ const marketColors: Record<MealMarket, { bg: string; color: string }> = {
 
 export default function AddMealModal({ onClose, onSave }: Props) {
   const [f, setF] = useState({
-    mealName: "", market: "All" as MealMarket,
+    restaurantName: "",
+    mealName: "",
+    market: "All" as MealMarket,
     mealType: "Lunch" as MealType,
-    minPax: "2", maxPax: "30",
-    pricePerPersonGel: "", status: "Active" as MealStatus,
+    minPax: "2",
+    maxPax: "30",
+    pricePerPerson: "",
+    currency: "GEL" as MealCurrency,
+    status: "Active" as MealStatus,
   });
   const set = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }));
 
@@ -27,16 +32,25 @@ export default function AddMealModal({ onClose, onSave }: Props) {
       <form onSubmit={(e) => {
         e.preventDefault();
         onSave({
-          mealName: f.mealName, market: f.market, mealType: f.mealType,
-          minPax: parseInt(f.minPax) || 1, maxPax: parseInt(f.maxPax) || 99,
-          pricePerPersonGel: parseFloat(f.pricePerPersonGel) || 0,
+          restaurantName: f.restaurantName,
+          mealName: f.mealName,
+          market: f.market,
+          mealType: f.mealType,
+          minPax: parseInt(f.minPax) || 1,
+          maxPax: parseInt(f.maxPax) || 99,
+          pricePerPerson: parseFloat(f.pricePerPerson) || 0,
+          currency: f.currency,
           status: f.status,
         });
         onClose();
       }} style={{ padding: 24 }}>
+
         <Section label="Meal Details">
+          <Field label="Restaurant Name" required full>
+            <input required value={f.restaurantName} onChange={(e) => set("restaurantName", e.target.value)} style={inp} placeholder="e.g. Shavi Lomi" />
+          </Field>
           <Field label="Meal Name" required full>
-            <input required value={f.mealName} onChange={(e) => set("mealName", e.target.value)} style={inp} placeholder="e.g. Indian Restaurant – Set Lunch" />
+            <input required value={f.mealName} onChange={(e) => set("mealName", e.target.value)} style={inp} placeholder="e.g. Set Lunch" />
           </Field>
 
           <Field label="Market" full>
@@ -64,11 +78,27 @@ export default function AddMealModal({ onClose, onSave }: Props) {
             </select>
           </Field>
 
-          <Field label="Price per Person (GEL)" required>
-            <div style={{ position: "relative" }}>
-              <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#64748B", fontSize: 13, pointerEvents: "none" }}>₾</span>
-              <input required type="number" min="0" step="0.01" value={f.pricePerPersonGel} onChange={(e) => set("pricePerPersonGel", e.target.value)}
-                style={{ ...inp, paddingLeft: 26 }} placeholder="0.00" />
+          <Field label="Price per Person" required>
+            <div style={{ display: "flex", gap: 6 }}>
+              {/* Currency toggle */}
+              <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: "1px solid #334155", flexShrink: 0 }}>
+                {(["GEL", "USD"] as MealCurrency[]).map((c) => (
+                  <button key={c} type="button" onClick={() => set("currency", c)} style={{
+                    padding: "8px 12px", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700,
+                    background: f.currency === c ? (c === "GEL" ? "#0D2E1A" : "#1E3A5F") : "transparent",
+                    color: f.currency === c ? (c === "GEL" ? "#4ADE80" : "#60A5FA") : "#64748B",
+                  }}>
+                    {c === "GEL" ? "₾" : "$"}
+                  </button>
+                ))}
+              </div>
+              <div style={{ position: "relative", flex: 1 }}>
+                <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#64748B", fontSize: 13, pointerEvents: "none" }}>
+                  {f.currency === "GEL" ? "₾" : "$"}
+                </span>
+                <input required type="number" min="0" step="0.01" value={f.pricePerPerson} onChange={(e) => set("pricePerPerson", e.target.value)}
+                  style={{ ...inp, paddingLeft: 26 }} placeholder="0.00" />
+              </div>
             </div>
           </Field>
         </Section>

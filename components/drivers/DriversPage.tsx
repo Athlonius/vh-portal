@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Search, Plus, Pencil, Trash2, CalendarDays } from "lucide-react";
+import { Search, Plus, Pencil, Trash2, CalendarDays, AlertTriangle } from "lucide-react";
 import { mockDrivers, ALL_LANGUAGES, ALL_VEHICLES, type Driver } from "./mockDrivers";
 import TagList from "../shared/TagList";
 import AddDriverModal from "./AddDriverModal";
@@ -20,6 +20,26 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+function ConfirmDialog({ message, onConfirm, onCancel }: { message: string; onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <div onClick={onCancel} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.65)", backdropFilter: "blur(2px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: "#1E293B", border: "1px solid #334155", borderRadius: 14, padding: 28, maxWidth: 400, width: "100%", boxShadow: "0 24px 64px rgba(0,0,0,0.5)" }}>
+        <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 20 }}>
+          <span style={{ color: "#F87171", flexShrink: 0, marginTop: 2 }}><AlertTriangle size={20} /></span>
+          <div>
+            <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#F8FAFC" }}>Confirm Delete</p>
+            <p style={{ margin: "6px 0 0", fontSize: 13, color: "#94A3B8" }}>{message}</p>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+          <button onClick={onCancel} style={{ padding: "8px 20px", borderRadius: 8, border: "1px solid #334155", background: "none", color: "#94A3B8", fontSize: 13, cursor: "pointer" }}>Cancel</button>
+          <button onClick={onConfirm} style={{ padding: "8px 20px", borderRadius: 8, border: "none", background: "#EF4444", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Delete</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function DriversPage() {
   const [drivers, setDrivers] = useState<Driver[]>(mockDrivers);
   const [search, setSearch] = useState("");
@@ -27,6 +47,8 @@ export default function DriversPage() {
   const [langFilter, setLangFilter] = useState("All");
   const [vehicleFilter, setVehicleFilter] = useState("All");
   const [showModal, setShowModal] = useState(false);
+  const [editDriver, setEditDriver] = useState<Driver | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
 
   const filtered = useMemo(() => drivers.filter((d) => {
     const q = search.toLowerCase();
@@ -36,6 +58,15 @@ export default function DriversPage() {
     if (vehicleFilter !== "All" && !d.vehicleCategories.includes(vehicleFilter)) return false;
     return true;
   }), [drivers, search, activeOnly, langFilter, vehicleFilter]);
+
+  const confirmDelete = () => {
+    if (deleteConfirmId !== null) {
+      setDrivers((p) => p.filter((x) => x.id !== deleteConfirmId));
+      setDeleteConfirmId(null);
+    }
+  };
+
+  const driverToDelete = drivers.find((d) => d.id === deleteConfirmId);
 
   return (
     <div style={{ padding: "32px 32px 48px" }}>
@@ -81,7 +112,13 @@ export default function DriversPage() {
             <tbody>
               {filtered.length === 0
                 ? <tr><td colSpan={7} style={{ padding: "48px 0", textAlign: "center", color: "#475569" }}>No drivers found.</td></tr>
-                : filtered.map((d, i) => <DriverRow key={d.id} d={d} i={i + 1} onDelete={(id) => setDrivers((p) => p.filter((x) => x.id !== id))} />)
+                : filtered.map((d, i) => (
+                  <DriverRow
+                    key={d.id} d={d} i={i + 1}
+                    onEdit={setEditDriver}
+                    onDelete={(id) => setDeleteConfirmId(id)}
+                  />
+                ))
               }
             </tbody>
           </table>
@@ -90,12 +127,36 @@ export default function DriversPage() {
           <span style={{ fontSize: 12, color: "#64748B" }}>{filtered.length} of {drivers.length} drivers shown</span>
         </div>
       </div>
-      {showModal && <AddDriverModal onClose={() => setShowModal(false)} onSave={(d) => setDrivers((p) => [...p, { ...d, id: p.length + 1 }])} />}
+
+      {showModal && (
+        <AddDriverModal
+          onClose={() => setShowModal(false)}
+          onSave={(d) => setDrivers((p) => [...p, { ...d, id: p.length + 1 }])}
+        />
+      )}
+      {editDriver && (
+        <AddDriverModal
+          driver={editDriver}
+          onClose={() => setEditDriver(null)}
+          onSave={() => {}}
+          onUpdate={(d) => {
+            setDrivers((p) => p.map((x) => x.id === d.id ? d : x));
+            setEditDriver(null);
+          }}
+        />
+      )}
+      {deleteConfirmId !== null && (
+        <ConfirmDialog
+          message={`Delete driver "${driverToDelete?.firstName} ${driverToDelete?.lastName}"? This action cannot be undone.`}
+          onConfirm={confirmDelete}
+          onCancel={() => setDeleteConfirmId(null)}
+        />
+      )}
     </div>
   );
 }
 
-function DriverRow({ d, i, onDelete }: { d: Driver; i: number; onDelete: (id: number) => void }) {
+function DriverRow({ d, i, onEdit, onDelete }: { d: Driver; i: number; onEdit: (d: Driver) => void; onDelete: (id: number) => void }) {
   const [hov, setHov] = useState(false);
   return (
     <tr onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
@@ -112,7 +173,7 @@ function DriverRow({ d, i, onDelete }: { d: Driver; i: number; onDelete: (id: nu
       <td style={td}>
         <div style={{ display: "flex", gap: 4 }}>
           <IBtn title="Calendar" color="#60A5FA"><CalendarDays size={14} /></IBtn>
-          <IBtn title="Edit" color="#A78BFA"><Pencil size={14} /></IBtn>
+          <IBtn title="Edit" color="#A78BFA" onClick={() => onEdit(d)}><Pencil size={14} /></IBtn>
           <IBtn title="Delete" color="#F87171" onClick={() => onDelete(d.id)}><Trash2 size={14} /></IBtn>
         </div>
       </td>

@@ -5,23 +5,43 @@ import { X } from "lucide-react";
 import { ALL_LANGUAGES, ALL_VEHICLES, type Driver, type DriverStatus } from "./mockDrivers";
 import CheckboxGroup from "../shared/CheckboxGroup";
 
-interface Props { onClose: () => void; onSave: (d: Omit<Driver, "id">) => void; }
+interface Props {
+  onClose: () => void;
+  onSave: (d: Omit<Driver, "id">) => void;
+  onUpdate?: (d: Driver) => void;
+  driver?: Driver;
+}
 
-export default function AddDriverModal({ onClose, onSave }: Props) {
+export default function AddDriverModal({ onClose, onSave, onUpdate, driver }: Props) {
+  const isEdit = !!driver;
   const [f, setF] = useState({
-    firstName: "", lastName: "", phone: "", email: "",
-    status: "Active" as DriverStatus,
-    languages: [] as string[], vehicleCategories: [] as string[],
-    carDescription: "", plateNumber: "",
-    supplierCompany: "", supplierContactName: "", supplierPhone: "",
-    active: true, notes: "",
+    firstName: driver?.firstName ?? "", lastName: driver?.lastName ?? "",
+    phone: driver?.phone ?? "", email: driver?.email ?? "",
+    status: (driver?.status ?? "Active") as DriverStatus,
+    languages: driver?.languages ?? [] as string[],
+    vehicleCategories: driver?.vehicleCategories ?? [] as string[],
+    carDescription: driver?.carDescription ?? "", plateNumber: driver?.plateNumber ?? "",
+    supplierCompany: driver?.supplierCompany ?? "",
+    supplierContactName: driver?.supplierContactName ?? "",
+    supplierPhone: driver?.supplierPhone ?? "",
+    active: driver?.active ?? true, notes: driver?.notes ?? "",
   });
   const set = (k: keyof typeof f, v: unknown) => setF((p) => ({ ...p, [k]: v }));
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isEdit && onUpdate && driver) {
+      onUpdate({ ...f, id: driver.id });
+    } else {
+      onSave(f);
+    }
+    onClose();
+  };
+
   return (
     <Overlay onClose={onClose}>
-      <ModalHeader title="Add New Driver" sub="Fill in driver and vehicle details." onClose={onClose} />
-      <form onSubmit={(e) => { e.preventDefault(); onSave(f); onClose(); }} style={{ padding: 24 }}>
+      <ModalHeader title={isEdit ? "Edit Driver" : "Add New Driver"} sub="Fill in driver and vehicle details." onClose={onClose} />
+      <form onSubmit={handleSubmit} style={{ padding: 24 }}>
         <Section label="Personal Information">
           <Field label="First Name" required><input required value={f.firstName} onChange={(e) => set("firstName", e.target.value)} style={inp} placeholder="First name" /></Field>
           <Field label="Last Name" required><input required value={f.lastName} onChange={(e) => set("lastName", e.target.value)} style={inp} placeholder="Last name" /></Field>

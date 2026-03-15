@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Search, Plus, Pencil, Trash2 } from "lucide-react";
+import { Search, Plus, Pencil, Trash2, Upload, AlertTriangle } from "lucide-react";
 import { mockMeals, MEAL_MARKETS, MEAL_TYPES, type Meal } from "./mockMeals";
 import AddMealModal from "./AddMealModal";
 
@@ -26,7 +26,6 @@ function Pill({ label, map }: { label: string; map: Record<string, { bg: string;
   );
 }
 
-
 function IBtn({ children, title, color, onClick }: { children: React.ReactNode; title: string; color: string; onClick?: () => void }) {
   const [h, setH] = useState(false);
   return (
@@ -37,22 +36,45 @@ function IBtn({ children, title, color, onClick }: { children: React.ReactNode; 
   );
 }
 
+function ConfirmDialog({ message, onConfirm, onCancel }: { message: string; onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <div onClick={onCancel} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.65)", backdropFilter: "blur(2px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: "#1E293B", border: "1px solid #334155", borderRadius: 14, padding: 28, maxWidth: 400, width: "100%", boxShadow: "0 24px 64px rgba(0,0,0,0.5)" }}>
+        <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 20 }}>
+          <span style={{ color: "#F87171", flexShrink: 0, marginTop: 2 }}><AlertTriangle size={20} /></span>
+          <div>
+            <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#F8FAFC" }}>Confirm Delete</p>
+            <p style={{ margin: "6px 0 0", fontSize: 13, color: "#94A3B8" }}>{message}</p>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+          <button onClick={onCancel} style={{ padding: "8px 20px", borderRadius: 8, border: "1px solid #334155", background: "none", color: "#94A3B8", fontSize: 13, cursor: "pointer" }}>Cancel</button>
+          <button onClick={onConfirm} style={{ padding: "8px 20px", borderRadius: 8, border: "none", background: "#EF4444", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Delete</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function MealsPage() {
   const [meals, setMeals] = useState<Meal[]>(mockMeals);
   const [search, setSearch] = useState("");
   const [market, setMarket] = useState("All");
   const [mealType, setMealType] = useState("All");
   const [showModal, setShowModal] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
 
   const filtered = useMemo(() => meals.filter((m) => {
-    if (search && !m.mealName.toLowerCase().includes(search.toLowerCase())) return false;
+    if (search && !m.mealName.toLowerCase().includes(search.toLowerCase()) && !m.restaurantName.toLowerCase().includes(search.toLowerCase())) return false;
     if (market !== "All" && m.market !== market) return false;
     if (mealType !== "All" && m.mealType !== mealType) return false;
     return true;
   }), [meals, search, market, mealType]);
 
   const hasFilters = search || market !== "All" || mealType !== "All";
-  const avgPrice = filtered.length ? Math.round(filtered.reduce((s, m) => s + m.pricePerPersonGel, 0) / filtered.length) : 0;
+  const avgPrice = filtered.length ? Math.round(filtered.reduce((s, m) => s + m.pricePerPerson, 0) / filtered.length) : 0;
+
+  const mealToDelete = meals.find((m) => m.id === deleteConfirmId);
 
   return (
     <div style={{ padding: "32px 32px 48px" }}>
@@ -60,18 +82,21 @@ export default function MealsPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: "#F8FAFC" }}>Meals</h1>
-          <p style={{ margin: "6px 0 0", fontSize: 13.5, color: "#64748B" }}>
-            Manage meal options used in request inclusions.
-          </p>
+          <p style={{ margin: "6px 0 0", fontSize: 13.5, color: "#64748B" }}>Manage meal options used in request inclusions.</p>
         </div>
-        <button onClick={() => setShowModal(true)} style={addBtn}><Plus size={15} strokeWidth={2.5} />Add Meal</button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button style={{ ...uploadBtn }}>
+            <Upload size={14} strokeWidth={2.5} /> Upload Meals
+          </button>
+          <button onClick={() => setShowModal(true)} style={addBtn}><Plus size={15} strokeWidth={2.5} />Add Meal</button>
+        </div>
       </div>
 
       {/* Filters */}
       <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap", alignItems: "center" }}>
         <div style={{ position: "relative" }}>
           <Search size={14} color="#64748B" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search meal name..." style={{ ...fi, paddingLeft: 30, width: 220 }} />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search meal or restaurant..." style={{ ...fi, paddingLeft: 30, width: 240 }} />
         </div>
         <select value={market} onChange={(e) => setMarket(e.target.value)} style={{ ...fi, cursor: "pointer", width: 140 }}>
           <option value="All">All Markets</option>
@@ -110,21 +135,23 @@ export default function MealsPage() {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead>
               <tr style={{ background: "#0F172A", borderBottom: "1px solid #334155" }}>
-                {["#", "Meal Name", "Market", "Meal Type", "Min Pax", "Max Pax", "Price / Person (GEL)", "Status", "Actions"].map((c) => (
+                {["#", "Restaurant Name", "Meal Name", "Market", "Meal Type", "Min Pax", "Max Pax", "Price / Person", "Status", "Actions"].map((c) => (
                   <th key={c} style={th}>{c}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0
-                ? <tr><td colSpan={9} style={{ padding: "48px 0", textAlign: "center", color: "#475569" }}>No meals found.</td></tr>
-                : filtered.map((m, i) => <MealRow key={m.id} m={m} i={i + 1} onDelete={(id) => setMeals((p) => p.filter((x) => x.id !== id))} />)
+                ? <tr><td colSpan={10} style={{ padding: "48px 0", textAlign: "center", color: "#475569" }}>No meals found.</td></tr>
+                : filtered.map((m, i) => (
+                  <MealRow key={m.id} m={m} i={i + 1} onDelete={(id) => setDeleteConfirmId(id)} />
+                ))
               }
             </tbody>
             {filtered.length > 1 && (
               <tfoot>
                 <tr style={{ background: "#0F172A", borderTop: "2px solid #334155" }}>
-                  <td colSpan={6} style={{ padding: "10px 14px", color: "#64748B", fontSize: 12, fontWeight: 600 }}>
+                  <td colSpan={7} style={{ padding: "10px 14px", color: "#64748B", fontSize: 12, fontWeight: 600 }}>
                     {filtered.length} meals shown
                   </td>
                   <td style={{ padding: "10px 14px", color: "#4ADE80", fontSize: 12, fontWeight: 700 }}>
@@ -139,22 +166,34 @@ export default function MealsPage() {
       </div>
 
       {showModal && <AddMealModal onClose={() => setShowModal(false)} onSave={(m) => setMeals((p) => [...p, { ...m, id: p.length + 1 }])} />}
+      {deleteConfirmId !== null && (
+        <ConfirmDialog
+          message={`Delete meal "${mealToDelete?.mealName}"? This action cannot be undone.`}
+          onConfirm={() => { setMeals((p) => p.filter((x) => x.id !== deleteConfirmId)); setDeleteConfirmId(null); }}
+          onCancel={() => setDeleteConfirmId(null)}
+        />
+      )}
     </div>
   );
 }
 
 function MealRow({ m, i, onDelete }: { m: Meal; i: number; onDelete: (id: number) => void }) {
   const [hov, setHov] = useState(false);
+  const priceDisplay = m.currency === "GEL"
+    ? <span style={{ fontWeight: 700, color: "#4ADE80" }}>₾ {m.pricePerPerson}</span>
+    : <span style={{ fontWeight: 700, color: "#60A5FA" }}>$ {m.pricePerPerson}</span>;
+
   return (
     <tr onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       style={{ borderBottom: "1px solid #1E293B", background: hov ? "#162032" : "transparent", transition: "background 0.1s" }}>
       <td style={td}>{i}</td>
+      <td style={{ ...td, color: "#94A3B8" }}>{m.restaurantName}</td>
       <td style={{ ...td, fontWeight: 600, color: "#F8FAFC" }}>{m.mealName}</td>
       <td style={td}><Pill label={m.market} map={marketStyle} /></td>
       <td style={td}><Pill label={m.mealType} map={mealTypeStyle} /></td>
       <td style={{ ...td, textAlign: "center", color: "#94A3B8" }}>{m.minPax}</td>
       <td style={{ ...td, textAlign: "center", color: "#94A3B8" }}>{m.maxPax}</td>
-      <td style={{ ...td, fontWeight: 700, color: "#4ADE80" }}>₾ {m.pricePerPersonGel}</td>
+      <td style={td}>{priceDisplay}</td>
       <td style={td}>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 600, color: m.status === "Active" ? "#4ADE80" : "#64748B" }}>
           <span style={{ width: 6, height: 6, borderRadius: "50%", background: m.status === "Active" ? "#22C55E" : "#475569" }} />{m.status}
@@ -174,3 +213,4 @@ const th: React.CSSProperties = { padding: "11px 14px", textAlign: "left", color
 const td: React.CSSProperties = { padding: "12px 14px", color: "#E2E8F0", verticalAlign: "middle" };
 const fi: React.CSSProperties = { background: "#1E293B", border: "1px solid #334155", borderRadius: 8, color: "#F8FAFC", fontSize: 13, padding: "7px 12px", outline: "none", height: 36, colorScheme: "dark" };
 const addBtn: React.CSSProperties = { background: "#2563EB", border: "none", borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 600, padding: "8px 18px", cursor: "pointer", height: 38, display: "flex", alignItems: "center", gap: 6 };
+const uploadBtn: React.CSSProperties = { background: "#14532D", border: "1px solid #166534", borderRadius: 8, color: "#4ADE80", fontSize: 13, fontWeight: 600, padding: "8px 16px", cursor: "pointer", height: 38, display: "flex", alignItems: "center", gap: 6 };

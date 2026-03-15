@@ -42,23 +42,35 @@ function IBtn({ children, title, color, onClick }: { children: React.ReactNode; 
   );
 }
 
+const CITY_OPTIONS = ["Tbilisi", "Batumi", "Gudauri", "Kazbegi", "Borjomi", "Kakheti", "Any"] as const;
+
 export default function ExtrasPage() {
   const [extras, setExtras] = useState<Extra[]>(mockExtras);
   const [search, setSearch] = useState("");
   const [serviceType, setServiceType] = useState("All");
-  const [city, setCity] = useState("All");
+  const [selectedCities, setSelectedCities] = useState<string[]>([]);
   const [calcType, setCalcType] = useState("All");
   const [showModal, setShowModal] = useState(false);
+
+  const toggleCity = (c: string) => {
+    if (c === "Any") {
+      setSelectedCities([]);
+      return;
+    }
+    setSelectedCities((prev) =>
+      prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]
+    );
+  };
 
   const filtered = useMemo(() => extras.filter((e) => {
     if (search && !e.serviceName.toLowerCase().includes(search.toLowerCase())) return false;
     if (serviceType !== "All" && e.serviceType !== serviceType) return false;
-    if (city !== "All" && e.city !== city) return false;
+    if (selectedCities.length > 0 && !selectedCities.includes(e.city)) return false;
     if (calcType !== "All" && e.calculateType !== calcType) return false;
     return true;
-  }), [extras, search, serviceType, city, calcType]);
+  }), [extras, search, serviceType, selectedCities, calcType]);
 
-  const hasFilters = search || serviceType !== "All" || city !== "All" || calcType !== "All";
+  const hasFilters = search || serviceType !== "All" || selectedCities.length > 0 || calcType !== "All";
 
   const gelTotal = filtered.filter(e => e.currency === "GEL" && e.calculateType === "Per Person").reduce((s, e) => s + e.price, 0);
 
@@ -85,21 +97,36 @@ export default function ExtrasPage() {
           <option value="All">All Service Types</option>
           {SERVICE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
-        <select value={city} onChange={(e) => setCity(e.target.value)} style={{ ...fi, cursor: "pointer", width: 130 }}>
-          <option value="All">All Cities</option>
-          {EXTRA_CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
         <select value={calcType} onChange={(e) => setCalcType(e.target.value)} style={{ ...fi, cursor: "pointer", width: 170 }}>
           <option value="All">All Calculate Types</option>
           {CALCULATE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
         {hasFilters && (
-          <button onClick={() => { setSearch(""); setServiceType("All"); setCity("All"); setCalcType("All"); }}
+          <button onClick={() => { setSearch(""); setServiceType("All"); setSelectedCities([]); setCalcType("All"); }}
             style={{ background: "none", border: "1px solid #475569", borderRadius: 8, color: "#94A3B8", fontSize: 12, padding: "7px 12px", cursor: "pointer", height: 36 }}>
             Clear
           </button>
         )}
         <span style={{ marginLeft: "auto", fontSize: 12, color: "#64748B" }}>{filtered.length} item{filtered.length !== 1 ? "s" : ""}</span>
+      </div>
+
+      {/* City checkboxes */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+        <span style={{ fontSize: 11, color: "#64748B", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginRight: 4 }}>City:</span>
+        {CITY_OPTIONS.map((c) => {
+          const active = c === "Any" ? selectedCities.length === 0 : selectedCities.includes(c);
+          return (
+            <label key={c} style={{ display: "inline-flex", alignItems: "center", gap: 5, cursor: "pointer", padding: "5px 12px", borderRadius: 20, border: `1px solid ${active ? "#3B82F6" : "#334155"}`, background: active ? "#1E3A5F" : "transparent", transition: "all 0.15s" }}>
+              <input
+                type="checkbox"
+                checked={active}
+                onChange={() => toggleCity(c)}
+                style={{ accentColor: "#3B82F6", width: 12, height: 12 }}
+              />
+              <span style={{ fontSize: 12, fontWeight: 600, color: active ? "#60A5FA" : "#94A3B8" }}>{c}</span>
+            </label>
+          );
+        })}
       </div>
 
       {/* Table */}

@@ -72,6 +72,7 @@ export default function AddPartnerModal({ onClose, onSave, nextId }: Props) {
               <select value={form.market} onChange={(e) => set("market", e.target.value as Market)} style={{ ...inp, cursor: "pointer" }}>
                 <option value="India">India</option>
                 <option value="GCC">GCC</option>
+                <option value="Other">Other</option>
               </select>
             </Field>
             <Field label="Partnership Status">

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
-import { Pencil, ChevronDown, CheckCheck, Plus } from "lucide-react";
+import { Pencil, ChevronDown, CheckCheck, Plus, X } from "lucide-react";
 import { mockLeads, type Lead } from "./mockLeads";
 import StatusBadge from "../requests/StatusBadge";
 import { type RequestStatus } from "../requests/mockData";
@@ -10,6 +10,7 @@ import { type RequestStatus } from "../requests/mockData";
 const TODAY = "2026-03-14";
 
 const STATUS_OPTIONS: RequestStatus[] = ["In Progress", "Quoted", "Confirmed", "Cancelled", "Lost"];
+const FILTER_STATUS_OPTIONS = ["All", "In Progress", "Quoted"] as const;
 
 function fmt(d: string) {
   const [y, m, day] = d.split("-");
@@ -28,44 +29,49 @@ function DaysToArrival({ travelDateFrom }: { travelDateFrom: string }) {
   else if (days < 30) { color = "#FB923C"; bg = "#3B1A0A"; }
 
   return (
-    <span
-      style={{
-        display: "inline-block",
-        padding: "3px 10px",
-        borderRadius: 20,
-        background: bg,
-        color,
-        fontSize: 12,
-        fontWeight: 700,
-        whiteSpace: "nowrap",
-      }}
-    >
+    <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: 20, background: bg, color, fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>
       {days < 0 ? `${Math.abs(days)}d ago` : `${days}d`}
     </span>
   );
 }
 
-function isOverdue(nextFollowUp: string) {
-  return nextFollowUp < TODAY;
-}
-
-function isDueToday(nextFollowUp: string) {
-  return nextFollowUp === TODAY;
-}
+function isOverdue(nextFollowUp: string) { return nextFollowUp < TODAY; }
+function isDueToday(nextFollowUp: string) { return nextFollowUp === TODAY; }
 
 export default function LeadsTable() {
   const [leads, setLeads] = useState<Lead[]>(mockLeads);
   const [statusMenuId, setStatusMenuId] = useState<number | null>(null);
 
+  // Filters
+  const [agencyFilter, setAgencyFilter] = useState("");
+  const [agentFilter, setAgentFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"All" | "In Progress" | "Quoted">("All");
+  const [travelDateFrom, setTravelDateFrom] = useState("");
+  const [travelDateTo, setTravelDateTo] = useState("");
+
   const overdue = leads.filter((l) => isOverdue(l.nextFollowUp)).length;
   const dueToday = leads.filter((l) => isDueToday(l.nextFollowUp)).length;
+
+  const filtered = useMemo(() => leads.filter((l) => {
+    if (agencyFilter && !l.travelAgency.toLowerCase().includes(agencyFilter.toLowerCase())) return false;
+    if (agentFilter && !l.agent.toLowerCase().includes(agentFilter.toLowerCase())) return false;
+    if (statusFilter !== "All" && l.status !== statusFilter) return false;
+    if (travelDateFrom && l.travelDateFrom < travelDateFrom) return false;
+    if (travelDateTo && l.travelDateTo > travelDateTo) return false;
+    return true;
+  }), [leads, agencyFilter, agentFilter, statusFilter, travelDateFrom, travelDateTo]);
+
+  const hasFilters = agencyFilter || agentFilter || statusFilter !== "All" || travelDateFrom || travelDateTo;
+
+  const clearFilters = () => {
+    setAgencyFilter(""); setAgentFilter(""); setStatusFilter("All");
+    setTravelDateFrom(""); setTravelDateTo("");
+  };
 
   const markFollowedUp = (id: number) => {
     setLeads((prev) =>
       prev.map((l) =>
-        l.id === id
-          ? { ...l, lastFollowUpDate: TODAY, lastFollowUpBy: "Admin", nextFollowUp: "" }
-          : l
+        l.id === id ? { ...l, lastFollowUpDate: TODAY, lastFollowUpBy: "Admin", nextFollowUp: "" } : l
       )
     );
   };
@@ -86,21 +92,14 @@ export default function LeadsTable() {
           </p>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <Link href="/confirmations">
-            <button style={navBtn}>Confirmations</button>
-          </Link>
-          <Link href="/requests">
-            <button style={navBtn}>Requests</button>
-          </Link>
-          <button style={newBtn}>
-            <Plus size={15} strokeWidth={2.5} />
-            New Request
-          </button>
+          <Link href="/confirmations"><button style={navBtn}>Confirmations</button></Link>
+          <Link href="/requests"><button style={navBtn}>Requests</button></Link>
+          <button style={newBtn}><Plus size={15} strokeWidth={2.5} />New Request</button>
         </div>
       </div>
 
       {/* Counter badges */}
-      <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+      <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
         <span style={countBadge("#3B0F0F", "#F87171")}>
           <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#EF4444", display: "inline-block", marginRight: 6 }} />
           Overdue: {overdue}
@@ -109,6 +108,37 @@ export default function LeadsTable() {
           <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#F97316", display: "inline-block", marginRight: 6 }} />
           Due today: {dueToday}
         </span>
+      </div>
+
+      {/* Filters row */}
+      <div style={{ background: "#1E293B", border: "1px solid #334155", borderRadius: 10, padding: "12px 16px", marginBottom: 16, display: "flex", flexWrap: "wrap", gap: 10, alignItems: "flex-end" }}>
+        <label style={labelStyle}>
+          Travel Agency
+          <input value={agencyFilter} onChange={(e) => setAgencyFilter(e.target.value)} placeholder="Agency name..." style={{ ...fi, width: 170 }} />
+        </label>
+        <label style={labelStyle}>
+          Agent
+          <input value={agentFilter} onChange={(e) => setAgentFilter(e.target.value)} placeholder="Agent name..." style={{ ...fi, width: 140 }} />
+        </label>
+        <label style={labelStyle}>
+          Status
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)} style={{ ...fi, cursor: "pointer", width: 140 }}>
+            {FILTER_STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </label>
+        <label style={labelStyle}>
+          Travel Date
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <input type="date" value={travelDateFrom} onChange={(e) => setTravelDateFrom(e.target.value)} style={{ ...fi, width: 140, colorScheme: "dark" }} />
+            <span style={{ color: "#64748B", fontSize: 12 }}>–</span>
+            <input type="date" value={travelDateTo} onChange={(e) => setTravelDateTo(e.target.value)} style={{ ...fi, width: 140, colorScheme: "dark" }} />
+          </div>
+        </label>
+        {hasFilters && (
+          <button onClick={clearFilters} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "1px solid #475569", borderRadius: 8, color: "#94A3B8", fontSize: 12, padding: "7px 12px", cursor: "pointer", height: 36, alignSelf: "flex-end" }}>
+            <X size={13} /> Clear
+          </button>
+        )}
       </div>
 
       {/* Table */}
@@ -127,7 +157,7 @@ export default function LeadsTable() {
               </tr>
             </thead>
             <tbody>
-              {leads.map((lead, i) => {
+              {filtered.map((lead, i) => {
                 const overduRow = isOverdue(lead.nextFollowUp);
                 const todayRow = isDueToday(lead.nextFollowUp);
                 return (
@@ -147,6 +177,9 @@ export default function LeadsTable() {
                   />
                 );
               })}
+              {filtered.length === 0 && (
+                <tr><td colSpan={11} style={{ padding: "48px 0", textAlign: "center", color: "#475569" }}>No leads match your filters.</td></tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -154,7 +187,7 @@ export default function LeadsTable() {
         {/* Footer count */}
         <div style={{ padding: "12px 16px", borderTop: "1px solid #334155" }}>
           <span style={{ fontSize: 12, color: "#64748B" }}>
-            {leads.length} lead{leads.length !== 1 ? "s" : ""} total
+            {filtered.length} of {leads.length} lead{leads.length !== 1 ? "s" : ""}
           </span>
         </div>
       </div>
@@ -216,65 +249,33 @@ function LeadRow({ lead, index, overdue, dueToday, statusMenuOpen, onStatusMenuT
       </td>
       <td style={{ ...td }}>
         <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-          {/* Edit */}
-          <ActionBtn title="Edit" hoverColor="#60A5FA">
-            <Pencil size={14} />
-          </ActionBtn>
-
-          {/* Followed Up */}
+          <ActionBtn title="Edit" hoverColor="#60A5FA"><Pencil size={14} /></ActionBtn>
           <button
             title="Mark as followed up"
             onClick={() => onFollowedUp(lead.id)}
-            style={{
-              display: "flex", alignItems: "center", gap: 4,
-              background: "#0D2E1A", border: "1px solid #166534",
-              borderRadius: 6, color: "#4ADE80",
-              fontSize: 11, fontWeight: 600,
-              padding: "4px 8px", cursor: "pointer",
-              whiteSpace: "nowrap",
-            }}
+            style={{ display: "flex", alignItems: "center", gap: 4, background: "#0D2E1A", border: "1px solid #166534", borderRadius: 6, color: "#4ADE80", fontSize: 11, fontWeight: 600, padding: "4px 8px", cursor: "pointer", whiteSpace: "nowrap" }}
           >
             <CheckCheck size={12} strokeWidth={2.5} />
             Followed Up
           </button>
-
-          {/* Change Status */}
           <div style={{ position: "relative" }}>
             <button
               title="Change status"
               onClick={onStatusMenuToggle}
-              style={{
-                display: "flex", alignItems: "center", gap: 3,
-                background: "#1E293B", border: "1px solid #334155",
-                borderRadius: 6, color: "#94A3B8",
-                fontSize: 11, fontWeight: 500,
-                padding: "4px 8px", cursor: "pointer",
-                whiteSpace: "nowrap",
-              }}
+              style={{ display: "flex", alignItems: "center", gap: 3, background: "#1E293B", border: "1px solid #334155", borderRadius: 6, color: "#94A3B8", fontSize: 11, fontWeight: 500, padding: "4px 8px", cursor: "pointer", whiteSpace: "nowrap" }}
             >
               Status <ChevronDown size={11} />
             </button>
             {statusMenuOpen && (
               <div
                 onClick={(e) => e.stopPropagation()}
-                style={{
-                  position: "absolute", top: "calc(100% + 4px)", right: 0,
-                  background: "#1E293B", border: "1px solid #334155",
-                  borderRadius: 8, zIndex: 50, minWidth: 130,
-                  boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
-                  overflow: "hidden",
-                }}
+                style={{ position: "absolute", top: "calc(100% + 4px)", right: 0, background: "#1E293B", border: "1px solid #334155", borderRadius: 8, zIndex: 50, minWidth: 130, boxShadow: "0 8px 24px rgba(0,0,0,0.4)", overflow: "hidden" }}
               >
                 {STATUS_OPTIONS.map((s) => (
                   <button
                     key={s}
                     onClick={() => onStatusChange(lead.id, s)}
-                    style={{
-                      display: "block", width: "100%", textAlign: "left",
-                      background: lead.status === s ? "#0F172A" : "none",
-                      border: "none", color: lead.status === s ? "#F8FAFC" : "#94A3B8",
-                      fontSize: 12, padding: "8px 12px", cursor: "pointer",
-                    }}
+                    style={{ display: "block", width: "100%", textAlign: "left", background: lead.status === s ? "#0F172A" : "none", border: "none", color: lead.status === s ? "#F8FAFC" : "#94A3B8", fontSize: 12, padding: "8px 12px", cursor: "pointer" }}
                     onMouseEnter={(e) => { if (lead.status !== s) e.currentTarget.style.background = "#0F172A"; }}
                     onMouseLeave={(e) => { if (lead.status !== s) e.currentTarget.style.background = "none"; }}
                   >
@@ -297,58 +298,20 @@ function ActionBtn({ children, title, hoverColor }: { children: React.ReactNode;
       title={title}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
-      style={{
-        background: hov ? "#0F172A" : "none",
-        border: "none", borderRadius: 6,
-        padding: "4px 6px", cursor: "pointer",
-        color: hov ? hoverColor : "#475569",
-        display: "flex", alignItems: "center",
-        transition: "color 0.15s, background 0.15s",
-      }}
+      style={{ background: hov ? "#0F172A" : "none", border: "none", borderRadius: 6, padding: "4px 6px", cursor: "pointer", color: hov ? hoverColor : "#475569", display: "flex", alignItems: "center", transition: "color 0.15s, background 0.15s" }}
     >
       {children}
     </button>
   );
 }
 
-const th: React.CSSProperties = {
-  padding: "11px 14px",
-  textAlign: "left",
-  color: "#64748B",
-  fontWeight: 600,
-  fontSize: 11,
-  textTransform: "uppercase",
-  letterSpacing: "0.05em",
-  whiteSpace: "nowrap",
-};
-
-const td: React.CSSProperties = {
-  padding: "12px 14px",
-  color: "#E2E8F0",
-  verticalAlign: "middle",
-};
-
-const navBtn: React.CSSProperties = {
-  background: "#1E293B", border: "1px solid #334155",
-  borderRadius: 8, color: "#94A3B8",
-  fontSize: 13, fontWeight: 500,
-  padding: "7px 14px", cursor: "pointer", height: 36,
-};
-
-const newBtn: React.CSSProperties = {
-  background: "#2563EB", border: "none",
-  borderRadius: 8, color: "#fff",
-  fontSize: 13, fontWeight: 600,
-  padding: "7px 16px", cursor: "pointer", height: 36,
-  display: "flex", alignItems: "center", gap: 6,
-};
+const th: React.CSSProperties = { padding: "11px 14px", textAlign: "left", color: "#64748B", fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" };
+const td: React.CSSProperties = { padding: "12px 14px", color: "#E2E8F0", verticalAlign: "middle" };
+const fi: React.CSSProperties = { background: "#0F172A", border: "1px solid #334155", borderRadius: 8, color: "#F8FAFC", fontSize: 13, padding: "7px 12px", outline: "none", height: 36, colorScheme: "dark" };
+const navBtn: React.CSSProperties = { background: "#1E293B", border: "1px solid #334155", borderRadius: 8, color: "#94A3B8", fontSize: 13, fontWeight: 500, padding: "7px 14px", cursor: "pointer", height: 36 };
+const newBtn: React.CSSProperties = { background: "#2563EB", border: "none", borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 600, padding: "7px 16px", cursor: "pointer", height: 36, display: "flex", alignItems: "center", gap: 6 };
+const labelStyle: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 4, fontSize: 11, color: "#64748B", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" };
 
 function countBadge(bg: string, color: string): React.CSSProperties {
-  return {
-    display: "inline-flex", alignItems: "center",
-    padding: "5px 12px", borderRadius: 20,
-    background: bg, color,
-    fontSize: 12, fontWeight: 700,
-    border: `1px solid ${color}33`,
-  };
+  return { display: "inline-flex", alignItems: "center", padding: "5px 12px", borderRadius: 20, background: bg, color, fontSize: 12, fontWeight: 700, border: `1px solid ${color}33` };
 }

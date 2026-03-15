@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(cd:*)",
-      "Bash(fuser:*)"
+      "Bash(fuser:*)",
+      "Bash(gh auth:*)",
+      "Bash(which curl:*)",
+      "Bash(curl:*)",
+      "Bash(~/bin/gh auth:*)"
     ]
   }
 }

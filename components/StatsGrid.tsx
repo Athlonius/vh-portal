@@ -8,6 +8,7 @@ import {
   DollarSign,
   Clock,
   XCircle,
+  AlertTriangle,
 } from "lucide-react";
 
 const stats = [
@@ -64,6 +65,15 @@ const stats = [
     color: "#F97316",
     bgColor: "#3B1A0A",
     progress: 8,
+  },
+  {
+    title: "Aging",
+    value: 5,
+    subtitle: "No follow-up 7+ days",
+    icon: AlertTriangle,
+    color: "#F59E0B",
+    bgColor: "#3B2A00",
+    progress: 13,
   },
 ];
 
